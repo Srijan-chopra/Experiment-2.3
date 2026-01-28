@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG Drawing Tool</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        #toolbar { padding: 10px; background: #eee; }
+        #svgCanvas { 
+            width: 100vw; 
+            height: 80vh; 
+            cursor: crosshair; 
+            border: 3px solid #333; 
+            box-sizing: border-box;
+        }
+        .color-btn { width: 30px; height: 30px; border: none; border-radius: 50%; margin: 0 2px; cursor: pointer; }
+        button { padding: 8px 16px; margin: 0 5px; }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <button class="color-btn active" style="background: black;" data-color="#000"></button>
+        <button class="color-btn" style="background: red;" data-color="#f00"></button>
+        <button class="color-btn" style="background: blue;" data-color="#00f"></button>
+        <input type="range" id="size" min="1" max="10" value="3">
+        <button id="clear">Clear</button>
+        <button id="undo">Undo</button>
+    </div>
+    <svg id="svgCanvas" viewBox="0 0 800 600"></svg>
+
+    <script>
+        const svg = document.getElementById('svgCanvas');
+        let color = '#000', size = 3, drawing = false, path, history = [];
+
+        function getSvgPoint(e) {
+            const pt = svg.createSVGPoint();
+            pt.x = e.clientX; pt.y = e.clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        svg.onmousedown = (e) => {
+            drawing = true;
+            const pt = getSvgPoint(e);
+            path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M${pt.x} ${pt.y}`);
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', size);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(path);
+        };
+
+        svg.onmousemove = (e) => {
+            if (!drawing) return;
+            const pt = getSvgPoint(e);
+            path.setAttribute('d', path.getAttribute('d') + ` L${pt.x} ${pt.y}`);
+        };
+
+        svg.onmouseup = svg.onmouseleave = () => {
+            if (path) {
+                history.push(path.cloneNode(true));
+                path = null;
+            }
+            drawing = false;
+        };
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelector('.color-btn.active').classList.remove('active');
+                btn.classList.add('active');
+                color = btn.dataset.color;
+            };
+        });
+
+        document.getElementById('size').oninput = (e) => size = e.target.value;
+        document.getElementById('clear').onclick = () => (svg.innerHTML = '', history = []);
+        document.getElementById('undo').onclick = () => {
+            if (history.length) svg.removeChild(history.pop());
+        };
+    </script>
+</body>
+</html>
